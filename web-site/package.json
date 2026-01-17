@@ -19,6 +19,7 @@
   "homepage": "https://github.com/DucAnh0106/Hack-N-Roll_Product#readme",
   "dependencies": {
     "express": "^5.2.1",
-    "socket.io": "^4.8.3"
+    "socket.io": "^4.8.3",
+    "ws": "^8.19.0"
   }
 }
