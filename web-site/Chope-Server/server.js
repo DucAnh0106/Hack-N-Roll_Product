@@ -68,6 +68,11 @@ app.post('/roast', (req, res) => {
         espSocket.emit('roast', { roastType });
     }
 
+    if (espWsClient && espWsClient.readyState === WebSocket.OPEN) {
+        espWsClient.send(JSON.stringify({ type: 'roast', roastType }));
+        console.log('[WS] Sent roast to ESP32:', roastType);
+    }
+
     res.json({ ok: true });
 });
 
@@ -106,11 +111,11 @@ wss.on('connection', (ws) => {
                     clearTimeout(alertResetTimer);
                 }
                 
-                // Set timer to auto-reset after 2 seconds of no alerts
+                // Set timer to auto-reset after 5 seconds of no alerts
                 alertResetTimer = setTimeout(() => {
                     if (lifted) {
                         lifted = false;
-                        console.log('>>> Auto-reset: No motion for 2 seconds <<<');
+                        console.log('>>> Auto-reset: No motion for 5 seconds <<<');
                         if (dashboardSocket) {
                             dashboardSocket.emit('reset');
                         }
@@ -120,7 +125,7 @@ wss.on('connection', (ws) => {
                             console.log('[WS] Sent auto-reset to ESP32 (stop audio)');
                         }
                     }
-                }, 2000);
+                }, 5000);
                 
                 if (dashboardSocket) {
                     dashboardSocket.emit('alert', {
@@ -189,6 +194,11 @@ io.on('connection', (socket) => {
     socket.on('roast', (data) => {
         if (espSocket) {
             espSocket.emit('roast', data);
+        }
+
+        if (espWsClient && espWsClient.readyState === WebSocket.OPEN) {
+            espWsClient.send(JSON.stringify({ type: 'roast', roastType: data?.roastType }));
+            console.log('[WS] Sent roast to ESP32:', data?.roastType);
         }
     });
 

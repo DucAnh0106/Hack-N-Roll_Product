@@ -36,54 +36,129 @@ AudioOutputI2S *out = nullptr;
 bool isPlaying = false;
 bool shouldPlay = false;
 
+enum AudioMode {
+    AUDIO_NONE,
+    AUDIO_ALERT,
+    AUDIO_ROAST
+};
+
+AudioMode audioMode = AUDIO_NONE;
+int currentRoast = 0;
+
+const char* roastFiles[] = {
+    "/Roasting_One.mp3",
+    "/Roasting_Two.mp3",
+    "/Roasting_Three.mp3",
+    "/Roasting_Four.mp3"
+};
+
 // Motion tracking (for reset baseline)
 float lastRoll = 0;
 float lastPitch = 0;
 bool initialized = false;
 
 // ================= AUDIO FUNCTIONS =================
+void stopAllAudio() {
+    shouldPlay = false;
+    if (mp3 && mp3->isRunning()) {
+        mp3->stop();
+    }
+    if (buff) {
+        delete buff;
+        buff = nullptr;
+    }
+    if (file) {
+        delete file;
+        file = nullptr;
+    }
+    isPlaying = false;
+    audioMode = AUDIO_NONE;
+    currentRoast = 0;
+}
+
+void startFilePlayback(const char* path) {
+    if (buff) {
+        delete buff;
+        buff = nullptr;
+    }
+    if (file) {
+        delete file;
+        file = nullptr;
+    }
+
+    file = new AudioFileSourceSPIFFS(path);
+    buff = new AudioFileSourceBuffer(file, 8192);
+    if (file->isOpen()) {
+        mp3->begin(buff, out);
+        isPlaying = true;
+    } else {
+        Serial.printf("ERROR: Failed to open %s\n", path);
+        if (buff) {
+            delete buff;
+            buff = nullptr;
+        }
+        if (file) {
+            delete file;
+            file = nullptr;
+        }
+        isPlaying = false;
+    }
+}
+
 void startAlertSound() {
-    if (!shouldPlay) {
+    if (!shouldPlay || audioMode != AUDIO_ALERT) {
+        stopAllAudio();
         shouldPlay = true;
+        audioMode = AUDIO_ALERT;
         Serial.println(">>> Starting alert sound! <<<");
     }
 }
 
 void stopAlertSound() {
-    shouldPlay = false;
-    if (mp3 && mp3->isRunning()) {
-        mp3->stop();
+    if (audioMode == AUDIO_ALERT) {
+        stopAllAudio();
+        Serial.println(">>> Alert sound stopped <<<");
     }
-    isPlaying = false;
-    Serial.println(">>> Alert sound stopped <<<");
+}
+
+void toggleRoast(int roastNumber) {
+    if (roastNumber < 1 || roastNumber > 4) return;
+
+    if (audioMode == AUDIO_ROAST && currentRoast == roastNumber && mp3 && mp3->isRunning()) {
+        Serial.printf(">>> Stopping roast %d <<<\n", roastNumber);
+        stopAllAudio();
+        return;
+    }
+
+    stopAllAudio();
+    audioMode = AUDIO_ROAST;
+    currentRoast = roastNumber;
+    Serial.printf(">>> Playing roast %d <<<\n", roastNumber);
+    startFilePlayback(roastFiles[roastNumber - 1]);
 }
 
 void handleAudio() {
-    if (shouldPlay) {
+    if (audioMode == AUDIO_ALERT && shouldPlay) {
         if (mp3 && mp3->isRunning()) {
             // Keep feeding the decoder
             if (!mp3->loop()) {
                 mp3->stop();
                 isPlaying = false;
-                // Restart if still in alert mode
-                if (shouldPlay) {
-                    if (buff) delete buff;
-                    if (file) delete file;
-                    file = new AudioFileSourceSPIFFS("/alert.mp3");
-                    buff = new AudioFileSourceBuffer(file, 8192);
-                    mp3->begin(buff, out);
-                    isPlaying = true;
-                }
+                // Play once, then stop completely
+                stopAllAudio();
+                Serial.println(">>> Alert sound finished <<<");
             }
         } else if (!isPlaying) {
-            // Start playing
-            if (buff) delete buff;
-            if (file) delete file;
-            file = new AudioFileSourceSPIFFS("/alert.mp3");
-            buff = new AudioFileSourceBuffer(file, 8192);
-            if (file->isOpen()) {
-                mp3->begin(buff, out);
-                isPlaying = true;
+            // Start playing once
+            startFilePlayback("/alert.mp3");
+        }
+    } else if (audioMode == AUDIO_ROAST) {
+        if (mp3 && mp3->isRunning()) {
+            if (!mp3->loop()) {
+                mp3->stop();
+                isPlaying = false;
+                Serial.println(">>> Roast finished <<<");
+                stopAllAudio();
             }
         }
     }
@@ -101,15 +176,34 @@ void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
             break;
         case WStype_TEXT:
             Serial.printf("[WS] Message: %s\n", payload);
-            // Check for reset command to stop sound (handles both JSON and plain text)
-            if (strstr((char*)payload, "reset") != NULL) {
-                Serial.println(">>> RESET received - stopping alarm! <<<");
-                stopAlertSound();
-                // Reset the baseline so small movements don't re-trigger
-                sensors_event_t event;
-                bno.getEvent(&event);
-                lastRoll = event.orientation.y;
-                lastPitch = event.orientation.z;
+            {
+                StaticJsonDocument<128> doc;
+                DeserializationError err = deserializeJson(doc, payload, length);
+                if (!err) {
+                    const char* msgType = doc["type"] | "";
+                    if (strcmp(msgType, "reset") == 0) {
+                        Serial.println(">>> RESET received - stopping alarm! <<<");
+                        stopAlertSound();
+                        // Reset the baseline so small movements don't re-trigger
+                        sensors_event_t event;
+                        bno.getEvent(&event);
+                        lastRoll = event.orientation.y;
+                        lastPitch = event.orientation.z;
+                    } else if (strcmp(msgType, "roast") == 0) {
+                        int roastType = doc["roastType"] | 0;
+                        toggleRoast(roastType);
+                    }
+                } else {
+                    // Fallback for plain text messages
+                    if (strstr((char*)payload, "reset") != NULL) {
+                        Serial.println(">>> RESET received - stopping alarm! <<<");
+                        stopAlertSound();
+                        sensors_event_t event;
+                        bno.getEvent(&event);
+                        lastRoll = event.orientation.y;
+                        lastPitch = event.orientation.z;
+                    }
+                }
             }
             break;
     }
@@ -140,7 +234,7 @@ void setup() {
     out->SetBitsPerSample(16);
     out->SetChannels(1);
     out->SetRate(44100);
-    out->SetGain(0.4);
+    out->SetGain(0.25);
     out->SetOutputModeMono(true);
 
     // 3. Create MP3 decoder
