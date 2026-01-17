@@ -1,11 +1,9 @@
-// Connect to the backend server via Socket.IO
+// -------------------- SOCKET CONNECTION --------------------
 const socket = io('http://localhost:3000', {
-    query: {
-        type: 'dashboard'
-    }
+    query: { type: 'dashboard' }
 });
 
-// Get DOM elements
+// -------------------- DOM ELEMENTS --------------------
 const statusBox = document.getElementById('status-box');
 const statusText = statusBox.querySelector('.status-text');
 const thiefDisplay = document.getElementById('thief-display');
@@ -14,139 +12,111 @@ const snoozeBtn = document.getElementById('snooze-btn');
 const testAlertBtn = document.getElementById('test-alert-btn');
 const modeDropdown = document.getElementById('mode-dropdown');
 
-// Listen for connection
+// -------------------- SOCKET EVENTS --------------------
 socket.on('connect', () => {
     console.log('Connected to server');
 });
 
-// Listen for alert from server (when ESP32 detects motion)
-socket.on('alert', (data) => {
-    console.log('Alert received:', data.message);
-    updateStatus(true); // Switch to danger mode
+socket.on('alert', () => {
+    updateStatus(true);
 });
 
-// Listen for initial status on connection
 socket.on('status', (data) => {
-    console.log('Initial status:', data.lifted);
     updateStatus(data.lifted);
 });
 
-// Listen for reset from server
 socket.on('reset', () => {
-    console.log('Reset signal received from server');
     updateStatus(false);
 });
 
-// Function to update status display
+socket.on('disconnect', () => {
+    console.log('Disconnected from server');
+});
+
+// -------------------- STATUS UI --------------------
 function updateStatus(isDanger) {
     if (isDanger) {
         statusBox.className = 'danger';
         statusText.textContent = 'THIEF DETECTED!';
-        snoozeBtn.style.display = 'block'; // Show snooze button
+        snoozeBtn.style.display = 'block';
     } else {
         statusBox.className = 'safe';
         statusText.textContent = 'ALL CLEAR';
-        snoozeBtn.style.display = 'none'; // Hide snooze button
+        snoozeBtn.style.display = 'none';
     }
 }
 
-// Function to update camera feed (for future use)
+// -------------------- CAMERA (FUTURE) --------------------
 function updateCameraFeed(imageUrl) {
-    if (imageUrl) {
-        thiefDisplay.innerHTML = `<img src="${imageUrl}" alt="Thief captured" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px;">`;
-    } else {
-        thiefDisplay.innerHTML = '<span>Waiting for thief...</span>';
-    }
+    thiefDisplay.innerHTML = imageUrl
+        ? `<img src="${imageUrl}" style="width:100%;height:100%;object-fit:cover">`
+        : '<span>Waiting for thief...</span>';
 }
 
-// Add click handlers to roast buttons
-roastButtons.forEach((button, index) => {
-    button.addEventListener('click', () => {
-        const roastType = index + 1;
-        console.log(`Roast #${roastType} button clicked!`);
-        
-        // Emit roast event to server
-        socket.emit('roast', { roastType });
+// -------------------- ROAST BUTTONS --------------------
+roastButtons.forEach((btn, index) => {
+    btn.addEventListener('click', () => {
+        socket.emit('roast', { roastType: index + 1 });
     });
 });
 
-// Snooze button click handler
+// -------------------- SNOOZE --------------------
 snoozeBtn.addEventListener('click', () => {
-    console.log('Snooze button clicked - resetting status');
-    
-    // Send reset request to backend
-    fetch('/reset', { 
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-    })
-    .then(response => response.json())
-    .then(data => {
-        console.log('Status reset:', data);
-        updateStatus(false); // Update UI to safe mode
-    })
-    .catch(error => console.error('Error resetting status:', error));
+    fetch('/reset', { method: 'POST' })
+        .then(() => updateStatus(false))
+        .catch(console.error);
 });
 
-// Test alert button handler
+// -------------------- TEST ALERT --------------------
 testAlertBtn.addEventListener('click', () => {
-    console.log('Test alert button clicked');
-    fetch('/alert', { 
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-    })
-    .then(response => response.json())
-    .then(data => console.log('Test alert sent:', data))
-    .catch(error => console.error('Error sending test alert:', error));
+    fetch('/alert', { method: 'POST' }).catch(console.error);
 });
 
-// Mode dropdown handler
-modeDropdown.addEventListener('change', (e) => {
-    const selectedMode = e.target.value;
-    console.log('Mode changed to:', selectedMode);
-    
-    // Send mode change to backend
-    fetch('/mode', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode: selectedMode })
-    })
-    .then(response => response.json())
-    .then(data => {
-        console.log('Mode updated:', data);
-        // Update UI based on mode
-        updateModeUI(selectedMode);
-    })
-    .catch(error => console.error('Error updating mode:', error));
-});
+// -------------------- MODE HANDLING --------------------
+const MODE_CONFIG = {
+    chope: {
+        title: 'CHOPE-O-METER™ Master Dashboard',
+        cameraLabel: 'Live Feed'
+    },
+    sentry: {
+        title: 'Sentry Dashboard',
+        cameraLabel: 'Item Monitor'
+    }
+};
 
-// Function to update UI based on mode
 function updateModeUI(mode) {
     const header = document.querySelector('h1');
     const cameraLabel = document.querySelector('.camera-label');
-    
-    if (mode === 'chope') {
-        header.textContent = 'CHOPE-O-METER™ Master Dashboard';
-        cameraLabel.textContent = 'Live Feed';
-    } else if (mode === 'sentry') {
-        header.textContent = 'SENTRY MODE™ Master Dashboard';
-        cameraLabel.textContent = 'Item Monitor';
-    }
+
+    if (!MODE_CONFIG[mode]) return;
+
+    header.textContent = MODE_CONFIG[mode].title;
+    cameraLabel.textContent = MODE_CONFIG[mode].cameraLabel;
 }
 
-// Load saved mode on page load
-window.addEventListener('load', () => {
-    fetch('/mode')
-    .then(response => response.json())
-    .then(data => {
-        if (data.mode) {
-            modeDropdown.value = data.mode;
-            updateModeUI(data.mode);
-        }
-    })
-    .catch(error => console.error('Error loading mode:', error));
+modeDropdown.addEventListener('change', (e) => {
+    const mode = e.target.value;
+
+    // Update UI immediately
+    updateModeUI(mode);
+
+    // Persist to backend
+    fetch('/mode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode })
+    }).catch(() => {});
 });
 
-// Handle disconnection
-socket.on('disconnect', () => {
-    console.log('Disconnected from server');
+// Load saved mode on startup
+window.addEventListener('load', () => {
+    fetch('/mode')
+        .then(res => res.json())
+        .then(data => {
+            if (data.mode) {
+                modeDropdown.value = data.mode;
+                updateModeUI(data.mode);
+            }
+        })
+        .catch(() => {});
 });
