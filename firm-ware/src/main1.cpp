@@ -26,8 +26,8 @@
 // =============================
 // WIFI
 // =============================
-const char* ssid = "jonny";
-const char* password = "oggy2864";
+const char* ssid = "Aryan";
+const char* password = "12345678";
 
 // =============================
 // STREAM SERVER
