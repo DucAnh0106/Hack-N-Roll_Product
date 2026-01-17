@@ -9,10 +9,8 @@ const io = new Server(server);
 
 app.use(express.json());
 
-// Serve static files from 'public' folder
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Explicit route for root
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
