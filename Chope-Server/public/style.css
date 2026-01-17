@@ -255,3 +255,96 @@ button:active {
         grid-template-columns: 1fr;
     }
 }
+/* Mode Selector Styles */
+.mode-selector {
+    margin-top: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.mode-selector label {
+    font-size: 1em;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 500;
+}
+
+#mode-dropdown {
+    padding: 8px 16px;
+    font-size: 1em;
+    background: #1a1a1a;
+    color: #e0e0e0;
+    border: 2px solid #333;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-weight: 500;
+}
+
+#mode-dropdown:hover {
+    border-color: #555;
+}
+
+#mode-dropdown:focus {
+    outline: none;
+    border-color: #4a9eff;
+}
+
+/* Test Button Styles */
+.test-button {
+    width: 100%;
+    max-width: 300px;
+    margin: 0 auto 20px auto;
+    display: block;
+    padding: 12px 24px;
+    font-size: 1em;
+    font-weight: 600;
+    background: #ff9800;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.test-button:hover {
+    background: #f57c00;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(255, 152, 0, 0.4);
+}
+
+.test-button:active {
+    transform: translateY(0px);
+}
+
+/* Snooze Button Styles */
+.snooze-button {
+    margin-top: 20px;
+    padding: 12px 24px;
+    font-size: 1em;
+    font-weight: 600;
+    background: #3498db;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.snooze-button:hover {
+    background: #2980b9;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(52, 152, 219, 0.4);
+}
+
+.snooze-button:active {
+    transform: translateY(0px);
+}

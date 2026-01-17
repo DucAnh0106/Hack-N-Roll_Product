@@ -10,12 +10,27 @@
     <div class="container">
         <header>
             <h1>CHOPE-O-METER™ Master Dashboard</h1>
+            <div class="mode-selector">
+                <label for="mode-dropdown">Mode:</label>
+                <select id="mode-dropdown">
+                    <option value="chope">Chope</option>
+                    <option value="sentry">Sentry</option>
+                </select>
+            </div>
         </header>
+
+        <!-- Test Button (for development) -->
+        <button id="test-alert-btn" class="test-button">
+            🚨 TEST ALERT
+        </button>
 
         <div class="dashboard-grid">
             <div id="status-box" class="safe">
                 <div class="status-label">System Status</div>
                 <div class="status-text">ALL CLEAR</div>
+                <button id="snooze-btn" class="snooze-button" style="display: none;">
+                    Snooze Alert
+                </button>
             </div>
 
             <div class="camera-feed">
@@ -27,22 +42,17 @@
         </div>
 
         <div class="roast-control">
-            <div class="roast-label">Roasts</div>
+            <div class="roast-label">Sounds</div>
             <div class="button-grid">
-                <button id="btn-roast-1">Roast #1</button>
-                <button id="btn-roast-2">Roast #2</button>
-                <button id="btn-roast-3">Roast #3</button>
-                <button id="btn-roast-4">Roast #4</button>
+                <button id="btn-roast-1">#1</button>
+                <button id="btn-roast-2">#2</button>
+                <button id="btn-roast-3">#3</button>
+                <button id="btn-roast-4">#4</button>
             </div>
         </div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script src="script.js"></script>
-    <button onclick="fetch('/alert', { method: 'POST' })" 
-        style="padding: 10px; margin: 10px; background: orange; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px;">
-    🚨 TEST ALERT
-</button>
-
 </body>
 </html>

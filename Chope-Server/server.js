@@ -9,15 +9,18 @@ const io = new Server(server);
 
 app.use(express.json());
 
-app.use(express.static(path.join(__dirname, 'public')));
+// Serve static files from '../public' folder (go up one level, then into public)
+app.use(express.static(path.join('public/')));
 
+// Explicit route for root
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    res.sendFile('public/index.html');
 });
 
 let dashboardSocket = null;
 let espSocket = null;
 let lifted = false;
+let currentMode = 'chope'; // default mode
 
 app.post('/alert', (req, res) => {
     lifted = true;
@@ -35,6 +38,38 @@ app.post('/roast', (req, res) => {
         espSocket.emit('roast', { roastType });
     }
     res.json({ ok: true });
+});
+
+app.post('/reset', (req, res) => {
+    lifted = false;
+    console.log('Status reset to safe');
+    if (dashboardSocket) {
+        dashboardSocket.emit('reset');
+    }
+    res.json({ ok: true, lifted: false });
+});
+
+// Get current mode
+app.get('/mode', (req, res) => {
+    res.json({ mode: currentMode });
+});
+
+// Update mode
+app.post('/mode', (req, res) => {
+    const { mode } = req.body;
+    if (mode === 'chope' || mode === 'sentry') {
+        currentMode = mode;
+        console.log('Mode changed to:', currentMode);
+        
+        // Notify ESP32 about mode change
+        if (espSocket) {
+            espSocket.emit('mode', { mode: currentMode });
+        }
+        
+        res.json({ ok: true, mode: currentMode });
+    } else {
+        res.status(400).json({ ok: false, error: 'Invalid mode' });
+    }
 });
 
 io.on('connection', (socket) => {
@@ -66,6 +101,14 @@ io.on('connection', (socket) => {
         console.log('Selected roast:', data.roastType);
         if (espSocket) {
             espSocket.emit('roast', { roastType: data.roastType });
+        }
+    });
+
+    socket.on('reset', () => {
+        lifted = false;
+        console.log('Status reset via socket');
+        if (dashboardSocket) {
+            dashboardSocket.emit('reset');
         }
     });
 
