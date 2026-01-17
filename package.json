@@ -1,0 +1,24 @@
+{
+  "name": "hack-n-roll_product",
+  "version": "1.0.0",
+  "description": "Setting up intiall structure of the project",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DucAnh0106/Hack-N-Roll_Product.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/DucAnh0106/Hack-N-Roll_Product/issues"
+  },
+  "homepage": "https://github.com/DucAnh0106/Hack-N-Roll_Product#readme",
+  "dependencies": {
+    "express": "^5.2.1",
+    "socket.io": "^4.8.3"
+  }
+}
