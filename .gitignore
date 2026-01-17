@@ -1,4 +1,4 @@
-node_modules/
+front-end/node_modules/
 
 npm-debug.log*
 yarn-debug.log*
@@ -14,3 +14,13 @@ build/
 *.temp
 
 .env
+
+# --- PlatformIO / ESP32 Firmware ---
+.pio/
+**/.pio/
+**/firm-ware/.pio/
+.clang-format
+
+# --- Python / C++ Cache (Common in hardware projects) ---
+__pycache__/
+*.pyc
