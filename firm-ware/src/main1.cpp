@@ -85,12 +85,16 @@ void startCameraServer() {
 
 void setup() {
     Serial.begin(115200);
+    delay(1000); // Give serial and board time to stabilize
     Serial.println();
+    Serial.println("ESP32-S3-EYE Camera Starting...");
 
     // =============================
     // CAMERA CONFIG
     // =============================
     camera_config_t config;
+    memset(&config, 0, sizeof(config)); // Initialize all fields to 0
+    
     config.ledc_channel = LEDC_CHANNEL_0;
     config.ledc_timer   = LEDC_TIMER_0;
     config.pin_d0       = Y2_GPIO_NUM;
@@ -111,15 +115,21 @@ void setup() {
     config.pin_reset    = RESET_GPIO_NUM;
     config.xclk_freq_hz = 20000000;
     config.pixel_format = PIXFORMAT_JPEG;
+    config.grab_mode    = CAMERA_GRAB_LATEST;
+    config.fb_location  = CAMERA_FB_IN_PSRAM;
 
     config.frame_size   = FRAMESIZE_QVGA;   // 320x240
     config.jpeg_quality = 12;
     config.fb_count     = 2;
 
-    if (esp_camera_init(&config) != ESP_OK) {
-        Serial.println("Camera init failed");
-        return;
+    Serial.println("Initializing camera...");
+    esp_err_t err = esp_camera_init(&config);
+    if (err != ESP_OK) {
+        Serial.printf("Camera init failed with error 0x%x\n", err);
+        Serial.println("Halting - please check camera wiring");
+        while(1) { delay(1000); } // Halt instead of returning (prevents reboot loop)
     }
+    Serial.println("Camera OK!");
 
     // Flip the image (fix upside down)
     sensor_t * s = esp_camera_sensor_get();
